@@ -18,65 +18,18 @@ def build_parser(tokens):
   def error_handler(token):
     raise ParseError(f'{token} at position {token.source_pos} is unexpected')
 
-  @pg.production('prover : newline? premises PROVES thm NEWLINE stmts')
-  def prover(p): return Prover(premises=p[1], thm=p[3], stmts=p[-1])
+  @pg.production('wff : imp')
+  @pg.production('wff : neg')
+  def wff(p): return p[0]
 
-  @pg.production('premises : OCURLY wffs CCURLY')
-  def premises(p): return p[1]
+  @pg.production('wff : WFF')
+  def base_wff(p): return Wff(p[0].value)
 
-  @pg.production('stmts : stmt NEWLINE stmts')
-  def stmts(p): return [p[0]] + p[2]
+  @pg.production('neg : OPAREN NOT wff CPAREN')
+  def negate(p): return Negate(wff=p[2])
 
-  @pg.production('stmts : ')
-  def stmts_empty(p): return []
-
-  @pg.production('stmt : wff rule')
-  def stmt(p): return p[0]
-
-  @pg.production('stmt : wff binary_op wff rule')
-  def stmt_nice(p): return Operator(name=p[1], operands=[p[0], p[2]], arity=2)
-
-  @pg.production('thm : wff')
-  def thm(p): return p[0]
-
-  @pg.production('thm : wff binary_op wff')
-  def thm_nice(p): return [Operator(name=p[1], operands=[p[0], p[2]], arity=2)]
-
-  @pg.production('rule : ')
-  def rule(p): pass
-
-  @pg.production('wffs : wff COMMA wffs')
-  def wffs(p): return [p[0]] + p[-1]
-
-  @pg.production('wffs : ')
-  def wffs_empty(p): return []
-
-  # recursively define a well formed formula
-  @pg.production('wff : OPAREN unary_op wff CPAREN')
-  def wff_unary(p): return Operator(name=p[1], operands=[p[2]], arity=1)
-
-  @pg.production('wff : OPAREN wff binary_op wff CPAREN')
-  def wff_binary(p): return Operator(name=p[2], operands=[p[1], p[3]], arity=2)
-
-  @pg.production('wff : ATOM') # <- base case
-  def wff_atom(p): return p[0].value
-
-  # helper production rules
-  @pg.production('unary_op : NOT unary_op')
-  def unary_op(p): return p[0].name
-
-  @pg.production('unary_op : ')
-  def unary_op_empty(p): pass
-
-  @pg.production('binary_op : AND')
-  @pg.production('binary_op : OR')
-  @pg.production('binary_op : IMPLIES')
-  @pg.production('binary_op : EQUIV')
-  def binary_op(p): return p[0].value
-
-  @pg.production('newline? : NEWLINE')
-  @pg.production('newline? : ')
-  def newline(p): pass
+  @pg.production('imp : OPAREN wff IMPLIES wff CPAREN')
+  def implies(p): return Implies(left=p[1], right=p[3])
 
   return pg.build()
 
